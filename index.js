@@ -80,7 +80,7 @@ class contenedorProductos {
                             if(carrito.listadoProductos){
                                 const productosCarrito = carrito.listadoProductos.reduce((productoacc, producto) => 
                                 {
-                                    return libroacc = [...productoacc, producto.nombre]
+                                    return productoacc = [...productoacc, producto.nombre]
                                 }
                                 , [])
                                 res.json(productosCarrito)
