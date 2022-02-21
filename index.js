@@ -20,7 +20,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/static', express.static('public'));
 
-app.use('/productos', productos);
+app.use('/api', productos);
 
 
 
@@ -36,7 +36,7 @@ class contenedorProductos {
     }
     newCart()
     {
-        productos.post('/api/carrito', ( req,res )=>{
+        productos.post('/carrito', ( req,res )=>{
             idSumadorCarrito += 1;
             this.carritos.push([{
                 id: idSumadorCarrito,
@@ -49,20 +49,29 @@ class contenedorProductos {
     }
     deleteCartForId(){
         {
-            productos.delete('/api/carrito/:id', ( req, res ) => 
+            productos.delete('/carrito/:id', ( req, res ) => 
             {
-                for (let index = 0; index < this.carritos.length; index++) {
-                    this.carritos[index].map((carrito) => {
-                        if(carrito.id === parseInt(req.params.id))
+                if(Administrador){
+                    for (let index = 0; index < this.carritos.length; index++) {
+                        this.carritos[index].map((carrito) => {
+                            if(carrito.id === parseInt(req.params.id))
+                            {
+                                this.carritos.splice(index, 1)
+                            }                  
+                        })
+                    }
+                    this.carritos.map (producto => 
                         {
-                            this.carritos.splice(index, 1)
-                        }                  
-                    })
+                            res.json(this.carritos)    
+                        })
                 }
-                this.carritos.map (producto => 
-                    {
-                        res.json(this.carritos)    
-                    })
+                else{
+                    res.json({
+                        error: -1,
+                        ruta: "/carrito/:id",
+                        mensaje: "no autorizada"
+                    })    
+                }
             })
         }
     }
@@ -70,7 +79,7 @@ class contenedorProductos {
     getAllProductsInCart()
     {
         
-        productos.get('/api/:id/productos',  ( req,res )=>{
+        productos.get('/carrito/:id/productos',  ( req,res )=>{
             if (this.carritos)
             {
                 for(let i=0 ; i < this.carritos.length; i++){
@@ -80,7 +89,7 @@ class contenedorProductos {
                             if(carrito.listadoProductos){
                                 const productosCarrito = carrito.listadoProductos.reduce((productoacc, producto) => 
                                 {
-                                    return productoacc = [...productoacc, producto.nombre]
+                                    return productoacc = [...productoacc, producto]
                                 }
                                 , [])
                                 res.json(productosCarrito)
@@ -102,26 +111,16 @@ class contenedorProductos {
 
     addProductsInCart()
     {
-        productos.post('/api/:id/productos', ( req,res )=>{
-            const producto = req.body.producto;
-            const descripcion = req.body.descripcion;
-            const precio = req.body.precio;
-            const codigo = req.body.codigo;
-            const urlFoto = req.body.urlFoto;
+        productos.post('/carrito/:id/productos', ( req,res )=>{
+            const productNew = req.body;
             idSumadorCarritoProductos += 1;
             const timestamp = Date.now();
-            const stock = req.body.stock;
             if (this.carritos)
             {
                 const nuevoProducto = {
-                    title: producto,
-                    descripcion: descripcion,
-                    price: precio,
+                    productNew,
                     ID: idSumadorCarritoProductos,
-                    codigo: codigo,
-                    urlFoto: urlFoto,
                     timestamp: timestamp,
-                    stock: stock,
                 }
                 for(let i=0 ; i < this.carritos.length; i++){
                     this.carritos[i].map((carrito) => {
@@ -132,32 +131,38 @@ class contenedorProductos {
                     })
                 }
             }
-            
             res.json(this.carritos)
             
         })
     }
 
     deleteProductInCart(){
-        productos.delete('/api/:id/productos/:id_prod', ( req,res )=>{
-            
-            if (this.carritos)
-            {
-                for(let i=0 ; i < this.carritos.length; i++){
-                    this.carritos[i].map((carrito) => {
-                        if(carrito.id === parseInt(req.params.id))
-                        {
-                            for (let index = 0; index < carrito.listadoProductos.length; index++) {
-                                if(carrito.listadoProductos[index].ID === parseInt(req.params.id_prod))
-                                {
-                                    carrito.listadoProductos.splice(index, 1)
-                                }                  
+        productos.delete('/carrito/:id/productos/:id_prod', ( req,res )=>{
+            if(Administrador){
+                if (this.carritos)
+                {
+                    for(let i=0 ; i < this.carritos.length; i++){
+                        this.carritos[i].map((carrito) => {
+                            if(carrito.id === parseInt(req.params.id))
+                            {
+                                for (let index = 0; index < carrito.listadoProductos.length; index++) {
+                                    if(carrito.listadoProductos[index].ID === parseInt(req.params.id_prod))
+                                    {
+                                        carrito.listadoProductos.splice(index, 1)
+                                    }                  
+                                }
                             }
-                        }
-                    })
+                        })
+                    }
                 }
             }
-            
+            else{
+                res.json({
+                    error: -1,
+                    ruta: "/carrito/:id/productos/:id_prod",
+                    mensaje: "no autorizada"
+                })    
+            }                        
             res.json(this.carritos)
 
         })
@@ -165,7 +170,7 @@ class contenedorProductos {
     getAll()
     {
         
-        productos.get('/api/productos',  ( req,res )=>{
+        productos.get('/productos',  ( req,res )=>{
             if (this.productos)
             {
                 res.json(this.productos)
@@ -177,14 +182,12 @@ class contenedorProductos {
     }
     getById()
     {
-        productos.get('/api/productos/:id',  ( req,res )=>{
+        productos.get('/productos/:id',  ( req,res )=>{
             this.productos.map((producto) => {
                 
                 if (producto.ID === parseInt(req.params.id))
                 {
-                    res.json({
-                        nombreProducto: producto.title
-                    })
+                    res.json(producto)
 
                 }
                 else{
@@ -195,24 +198,14 @@ class contenedorProductos {
     }
     addProduct()
     {
-        productos.post('/api/productos', ( req,res )=>{
-            const producto = req.body.producto;
-            const descripcion = req.body.descripcion;
-            const precio = req.body.precio;
-            const codigo = req.body.codigo;
-            const urlFoto = req.body.urlFoto;
+        productos.post('/productos', ( req,res )=>{
+            const productNew = req.body;
             idSumador += 1;
             const timestamp = Date.now();
-            const stock = req.body.stock;
             this.productos.push({
-                title: producto,
-                descripcion: descripcion,
-                price: precio,
-                ID: idSumador,
-                codigo: codigo,
-                urlFoto: urlFoto,
+                productNew,
                 timestamp: timestamp,
-                stock: stock,
+                ID: idSumador,
             })
             res.json({
                 idProducto: idSumador
@@ -222,50 +215,60 @@ class contenedorProductos {
     }
     updateForId()
     {
-        productos.put('/api/productos/:id', ( req, res ) =>
+        productos.put('/productos/:id', ( req, res ) =>
         {
-            const producto = req.body.producto;
-            const descripcion = req.body.descripcion;
-            const precio = req.body.precio;
-            const urlFoto = req.body.urlFoto;
-            const timestamp = Date.now();
-            const stock = req.body.stock;
-            for(let i = 0; i < this.productos.length ; i++)
-            {
-                if(this.productos[i].ID === parseInt(req.params.id))
+            if(Administrador){
+                const productNew = req.body;
+                const timestamp = Date.now();
+                for(let i = 0; i < this.productos.length ; i++)
                 {
-                    this.productos[i] = {
-                        ... this.productos[i],
-                        title: producto,
-                        descripcion: descripcion,
-                        price: precio,
-                        urlFoto: urlFoto,
-                        timestamp: timestamp,
-                        stock: stock,
+                    if(this.productos[i].ID === parseInt(req.params.id))
+                    {
+                        this.productos[i] = {
+                            ... this.productos[i],
+                            productNew,
+                            timestamp: timestamp,
+                        }
+                        res.json({
+                            nombreProducto: this.productos[i].title,
+                            precioProdcuto: this.productos[i].price
+                        })
                     }
-                    res.json({
-                        nombreProducto: this.productos[i].title,
-                        precioProdcuto: this.productos[i].price
-                    })
                 }
+            }
+            else{
+                res.json({
+                    error: -1,
+                    ruta: "/productos/:id",
+                    mensaje: "no autorizada"
+                })    
             }
         })
     }
     deleteForId()
     {
-        productos.delete('/api/productos/:id', ( req, res ) => 
+        productos.delete('/productos/:id', ( req, res ) => 
         {
-            for (let index = 0; index < this.productos.length; index++) {
-                if(this.productos[index].ID === parseInt(req.params.id))
-                {
-                    this.productos.splice(index, 1)
-                }                  
+            if(Administrador){
+                for (let index = 0; index < this.productos.length; index++) {
+                    if(this.productos[index].ID === parseInt(req.params.id))
+                    {
+                        this.productos.splice(index, 1)
+                    }                  
+                }
+                this.productos.map (producto => 
+                    {
+                        res.json(this.productos)
+    
+                    })
             }
-            this.productos.map (producto => 
-                {
-                    res.json(this.productos)
-
-                })
+            else{
+                res.json({
+                    error: -1,
+                    ruta: "/productos/:id",
+                    mensaje: "no autorizada"
+                })    
+            }
         })
     }
 }
